@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accessibility Analyzer</title>
+  <style>
+    :root {
+      --primary-color: #5B42F3;
+      --secondary-color: #f5f5f5;
+      --text-color: #333333;
+      --text-secondary: #666666;
+      --bg-color: #ffffff;
+      --border-color: #dddddd;
+      --success-color: #4CAF50;
+      --error-color: #F44336;
+      --warning-color: #FF9800;
+      --excellent-color: #2E7D32;
+      --good-color: #43A047;
+      --fair-color: #FB8C00;
+      --poor-color: #E53935;
+      
+      /* Tag colors */
+      --popular-color: #9C27B0;
+      --easiest-color: #2196F3;
+      --free-color: #4CAF50;
+      --premium-color: #F44336;
+      --ai-color: #E91E63;
+      --nlp-color: #FF9800;
+      --freemium-color: #795548;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text-color);
+      background-color: var(--bg-color);
+      overflow-x: hidden;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    
+    /* Sidebar Container */
+    .sidebar-container {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    
+    /* Header */
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px;
+      border-bottom: 1px solid var(--border-color);
+      position: relative;
+    }
+    
+    .sidebar-header-drag {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 30px;
+      cursor: grab;
+    }
+    
+    .logo {
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--primary-color);
+    }
+    
+    .logo span.un {
+      opacity: 0.5;
+    }
+    
+    .header-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    
+    .control-button {
+      background: none;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+    }
+    
+    .control-button:hover {
+      background-color: rgba(0,0,0,0.1);
+    }
+    
+    /* Readiness Score */
+    .accessibility-score-container {
+      background-color: var(--secondary-color);
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .score-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+    
+    .score-circle {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 4px solid var(--primary-color);
+      margin: 10px auto;
+    }
+    
+    .score-number {
+      font-weight: bold;
+      font-size: 32px;
+    }
+    
+    .score-percent {
+      font-size: 14px;
+    }
+    
+    .score-description {
+      margin-top: 8px;
+      font-size: 14px;
+    }
+    
+    .tell-me-button {
+      position: relative;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 50%;
+      transition: background-color 0.2s;
+    }
+
+    .tell-me-button:hover {
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .play-icon, .pause-icon, .resume-icon {
+      display: none;
+    }
+
+    .tell-me-button[data-state="play"] .play-icon {
+      display: block;
+    }
+
+    .tell-me-button[data-state="play"]:hover .play-icon {
+      display: none;
+    }
+
+    .tell-me-button[data-state="play"]:hover .pause-icon {
+      display: block;
+    }
+
+    .tell-me-button[data-state="pause"] .pause-icon {
+      display: block;
+    }
+
+    .tell-me-button[data-state="resume"] .resume-icon {
+      display: block;
+    }
+    
+    .tell-me-icon {
+      font-size: 16px;
+    }
+    
+    .score-circle.poor { border-color: var(--poor-color); }
+    .score-circle.fair { border-color: var(--fair-color); }
+    .score-circle.good { border-color: var(--good-color); }
+    .score-circle.excellent { border-color: var(--excellent-color); }
+    
+    /* Navigation */
+    .sidebar-nav {
+      display: flex;
+      padding: 10px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .nav-item {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+    
+    .nav-item:hover {
+      background-color: var(--secondary-color);
+    }
+    
+    .nav-item.active {
+      background-color: var(--primary-color);
+      color: white;
+    }
+    
+    /* Content */
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 15px;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .spinner {
+      border: 3px solid rgba(0, 0, 0, 0.1);
+      border-top: 3px solid var(--primary-color);
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Feature Items */
+    .feature-item {
+      padding: 15px;
+      border-radius: 8px;
+      background-color: var(--secondary-color);
+      margin-bottom: 15px;
+    }
+    
+    .feature-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    
+    .feature-name {
+      font-weight: bold;
+      font-size: 15px;
+    }
+    
+    .feature-status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .status-available {
+      background-color: rgba(76, 175, 80, 0.2);
+      color: var(--success-color);
+    }
+    
+    .status-unavailable {
+      background-color: rgba(244, 67, 54, 0.2);
+      color: var(--error-color);
+    }
+    
+    .feature-description {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+    
+    /* Buttons */
+    .solutions-button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 10px;
+    }
+    
+    .solutions-button:hover {
+      background-color: #4935d2;
+    }
+    
+    .settings-button {
+      background-color: #f0f0f0;
+      color: var(--text-color);
+      border: none;
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 10px;
+    }
+    
+    .settings-button:hover {
+      background-color: #e0e0e0;
+    }
+    
+    .solutions-icon, .settings-icon {
+      font-size: 16px;
+    }
+    
+    /* Solutions Container */
+    .solutions-container {
+      background-color: white;
+      border-radius: 12px;
+      padding: 15px;
+      margin-top: 15px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .how-to-title {
+      font-weight: 500;
+      margin-bottom: 15px;
+      font-size: 16px;
+      color: var(--text-color);
+    }
+    
+    .solutions-list {
+      list-style-position: outside;
+      padding-left: 25px;
+      margin: 0;
+    }
+    
+    .solution-item {
+      margin-bottom: 15px;
+      padding: 5px 0;
+    }
+    
+    .solution-title-link {
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    
+    .solution-title-link a {
+      color: var(--primary-color);
+      text-decoration: none;
+    }
+    
+    .solution-title-link a:hover {
+      text-decoration: underline;
+    }
+    
+    /* Settings Container */
+    .settings-container {
+      background-color: white;
+      border-radius: 12px;
+      padding: 15px;
+      margin-top: 15px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .settings-title {
+      font-weight: 500;
+      margin-bottom: 15px;
+      font-size: 16px;
+      color: var(--text-color);
+    }
+    
+    .settings-content {
+      margin-bottom: 15px;
+    }
+    
+    .setting-group {
+      margin-bottom: 15px;
+    }
+    
+    .setting-label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    
+    .setting-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 3px;
+      margin-bottom: 8px;
+    }
+    
+    .setting-input, .setting-select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .save-settings-button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: pointer;
+      width: 100%;
+    }
+    
+    /* Tags */
+    .solution-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    
+    .tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 50px;
+      font-size: 11px;
+      font-weight: 500;
+      color: white;
+    }
+    
+    .tag-popular {
+      background-color: var(--popular-color);
+    }
+    
+    .tag-easiest {
+      background-color: var(--easiest-color);
+    }
+    
+    .tag-free, .tag-0 {
+      background-color: var(--free-color);
+    }
+    
+    .tag-premium {
+      background-color: var(--premium-color);
+    }
+    
+    .tag-freemium {
+      background-color: var(--freemium-color);
+    }
+    
+    .tag-ai {
+      background-color: var(--ai-color);
+    }
+    
+    .tag-nlp {
+      background-color: var(--nlp-color);
+    }
+    
+    /* Footer */
+    .sidebar-footer {
+      padding: 15px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+    
+    #analyzeButton {
+      width: 100%;
+      padding: 10px;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    
+    #analyzeButton:hover {
+      background-color: #4935d2;
+    }
+    
+    /* Feature Selection */
+    .feature-selection-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--bg-color);
+      z-index: 1000;
+      display: none;
+      flex-direction: column;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .feature-selection-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    
+    .feature-selection-desc {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .feature-category-section {
+      margin-bottom: 20px;
+    }
+    
+    .feature-category-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .feature-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    
+    .feature-option {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .feature-option:hover {
+      background-color: #f9f9f9;
+    }
+    
+    .feature-option-checkbox {
+      margin-right: 8px;
+    }
+    
+    .feature-selection-buttons {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+    }
+    
+    .feature-selection-submit {
+      padding: 10px 20px;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    
+    /* Settings Dropdown Menu */
+    .settings-dropdown {
+      position: absolute;
+      top: 60px;
+      right: 15px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      width: 200px;
+      z-index: 1000;
+      display: none;
+    }
+    
+    .settings-dropdown-menu {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .settings-dropdown-item {
+      padding: 10px 15px;
+      border-bottom: 1px solid var(--border-color);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .settings-dropdown-item:last-child {
+      border-bottom: none;
+    }
+    
+    .settings-dropdown-item:hover {
+      background-color: #f5f5f5;
+    }
+    
+    /* Community Data */
+    .community-data {
+      background-color: #f5f9ff;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 15px;
+      border: 1px solid #e0e8f5;
+    }
+    
+    .community-title {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 10px;
+      color: var(--primary-color);
+    }
+    
+    .community-stats {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 12px;
+    }
+    
+    .stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+    
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    
+    .testimonial {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-style: italic;
+      line-height: 1.4;
+    }
+    
+    .testimonial blockquote {
+      margin: 0;
+      margin-bottom: 5px;
+    }
+    
+    .testimonial cite {
+      font-size: 12px;
+      font-style: normal;
+      font-weight: 500;
+    }
+    
+    /* Verification Method */
+    .verification-method {
+      background-color: #f2f8f2;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+      font-size: 13px;
+      border: 1px solid #e0f0e0;
+    }
+    
+    .verification-title {
+      font-weight: 500;
+      margin-bottom: 5px;
+      color: var(--success-color);
+    }
+    
+    .verification-details {
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+    
+    /* Chat */
+    .chat-button {
+      position: absolute;
+      bottom: 10px;
+      right: 15px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background-color: var(--primary-color);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      z-index: 100;
+      border: none;
+      font-size: 20px;
+    }
+    
+    .chat-panel {
+      position: absolute;
+      bottom: 75px;
+      right: 15px;
+      width: 290px;
+      height: 400px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      margin: 0 auto 15px;
+    }
+    
+    .chat-header {
+      padding: 10px 15px;
+      background-color: var(--primary-color);
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .chat-title {
+      font-weight: 500;
+    }
+    
+    .chat-close {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    
+    .chat-messages {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .chat-message {
+      max-width: 80%;
+      padding: 10px;
+      border-radius: 10px;
+      line-height: 1.4;
+    }
+    
+    .chat-message.assistant {
+      align-self: flex-start;
+      background-color: #f0f0f0;
+    }
+    
+    .chat-message.user {
+      align-self: flex-end;
+      background-color: var(--primary-color);
+      color: white;
+    }
+    
+    .chat-input-container {
+      padding: 10px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: 8px;
+    }
+    
+    .chat-input {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      resize: none;
+    }
+    
+    .chat-send-button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    
+    .chat-voice-button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      margin-right: 5px;
+    }
+    
+    .chat-voice-button.active {
+      background-color: #F44336;
+    }
+    
+    /* Minimized State */
+    .sidebar-container.minimized {
+      width: 70px;
+    }
+    
+    .sidebar-container.minimized .logo,
+    .sidebar-container.minimized .accessibility-score-container,
+    .sidebar-container.minimized .sidebar-nav,
+    .sidebar-container.minimized .sidebar-content,
+    .sidebar-container.minimized .sidebar-footer {
+      display: none;
+    }
+    
+    .sidebar-container.minimized .sidebar-header {
+      justify-content: center;
+      padding: 10px;
+    }
+    
+    .expand-button {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 8px;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 16px;
+      width: 40px;
+      height: 40px;
+    }
+    
+    .sidebar-container.minimized .expand-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* No Results Message */
+    .no-results {
+      padding: 30px;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+    
+    /* Notifications */
+    .notification {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      background-color: var(--primary-color);
+      color: white;
+      border-radius: 4px;
+      z-index: 2000;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      animation: fadeInOut 3s ease forwards;
+    }
+    
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translate(-50%, 20px); }
+      10% { opacity: 1; transform: translate(-50%, 0); }
+      90% { opacity: 1; transform: translate(-50%, 0); }
+      100% { opacity: 0; transform: translate(-50%, -20px); }
+    }
+    
+    /* Dark Mode */
+    body.dark-mode {
+      --bg-color: #1a1a1a;
+      --text-color: #f0f0f0;
+      --text-secondary: #aaaaaa;
+      --border-color: #444444;
+      --secondary-color: #2a2a2a;
+    }
+    
+    body.dark-mode .solutions-container,
+    body.dark-mode .settings-container,
+    body.dark-mode .settings-dropdown,
+    body.dark-mode .chat-panel {
+      background-color: #2a2a2a;
+    }
+    
+    body.dark-mode .chat-message.assistant {
+      background-color: #333333;
+    }
+    
+    body.dark-mode .community-data {
+      background-color: #2a2a2a;
+      border-color: #444444;
+    }
+    
+    body.dark-mode .verification-method {
+      background-color: #2a2a2a;
+      border-color: #444444;
+    }
+    
+    body.dark-mode .settings-dropdown-item:hover {
+      background-color: #333333;
+    }
+    
+    body.dark-mode .feature-option:hover {
+      background-color: #333333;
+    }
+
+    /* Styles for Detail View */
+    .details-view {
+      display: none; /* Hidden by default */
+    }
+
+    .sidebar-content.details-active .tab-content,
+    .sidebar-content.details-active #loading {
+      display: none; /* Hide main tabs/loading when details are active */
+    }
+
+    .sidebar-content.details-active .details-view {
+      display: block; /* Show details view when active */
+    }
+
+    .back-button {
+      background: none;
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 15px;
+      font-size: 14px;
+      color: var(--text-color);
+    }
+
+    .back-button:hover {
+      background-color: var(--secondary-color);
+    }
+
+    #details-view-title {
+      margin-bottom: 15px;
+      font-size: 18px;
+      color: var(--primary-color);
+    }
+
+    #details-view-content .solutions-container,
+    #details-view-content .settings-container {
+      margin-top: 0; /* Remove top margin when inside details view */
+      box-shadow: none;
+      border: none;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar-container" id="sidebarContainer">
+    <!-- Header -->
+    <div class="sidebar-header">
+      <div class="sidebar-header-drag" id="dragHandle"></div>
+      <div class="logo"><span class="un">un</span>less</div>
+      <div class="header-controls">
+        <button id="settingsButton" class="control-button">⚙</button>
+        <button id="closeButton" class="control-button">×</button>
+      </div>
+      <button id="expandButton" class="expand-button">+</button>
+    </div>
+    
+<!-- Settings Dropdown -->
+<div id="settingsDropdown" class="settings-dropdown">
+  <ul class="settings-dropdown-menu">
+    <li class="settings-dropdown-item" id="exportReport">
+      <svg width="18" height="18" viewBox="0 0 251 325" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M14 310.574H236.431" stroke="currentColor" stroke-width="27.8038" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M125.215 14V236.431M125.215 236.431L190.091 171.555M125.215 236.431L60.3398 171.555" stroke="currentColor" stroke-width="27.8038" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Export Access+ Score
+    </li>
+    <li class="settings-dropdown-item" id="exportSolutions">
+      <svg width="18" height="18" viewBox="0 0 251 325" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M14 310.574H236.431" stroke="currentColor" stroke-width="27.8038" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M125.215 14V236.431M125.215 236.431L190.091 171.555M125.215 236.431L60.3398 171.555" stroke="currentColor" stroke-width="27.8038" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Export Answer Key 
+    </li>
+    <li class="settings-dropdown-item" id="darkModeToggle">
+      <svg width="20" height="20" viewBox="0 0 242 242" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10.0352 114.495C10.0352 179.286 62.5577 231.808 127.348 231.808C173.409 231.808 213.27 205.262 232.466 166.634C127.348 166.634 75.2087 114.495 75.2087 9.37695C36.5812 28.5732 10.0352 68.4342 10.0352 114.495Z" stroke="currentColor" stroke-width="18.5359" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg> 
+      Toggle Dark Mode
+    </li>
+    <li class="settings-dropdown-item" id="contactSamantha">
+      <svg width="20" height="22" viewBox="0 0 104 112" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M43.9896 48.0784C43.2448 48.0784 42.6406 48.6773 42.6406 49.4117V55.1981C42.6406 55.9325 43.2396 56.5314 43.9896 56.5314C44.7343 56.5314 45.3385 55.9325 45.3385 55.1981V49.4117C45.3385 48.6669 44.7343 48.0784 43.9896 48.0784Z" fill="currentColor"/>
+        <path d="M15.4603 48.0784C14.7155 48.0784 14.1113 48.6773 14.1113 49.4117V55.1981C14.1113 55.9325 14.7103 56.5314 15.4603 56.5314C16.205 56.5314 16.8092 55.9325 16.8092 55.1981V49.4117C16.804 48.6669 16.205 48.0784 15.4603 48.0784Z" fill="currentColor"/>
+        <path d="M29.4427 64.093C29.2448 64.093 24.5104 64.1347 22.802 67.5045C21.9999 69.093 22.1874 70.8638 23.3072 72.1296C24.2656 73.2233 25.7083 73.7962 27.3488 73.7962C28.1509 73.7962 28.9999 73.6608 29.8696 73.3691C30.578 73.14 30.9634 72.3848 30.7238 71.6869C30.4842 70.9942 29.7238 70.6087 29.0155 70.8483C27.151 71.4629 25.8697 70.9837 25.3488 70.3952C24.9478 69.9265 24.8957 69.3275 25.2134 68.7025C26.1614 66.8484 29.3853 66.7703 29.4426 66.7703C30.1874 66.7703 30.7916 66.1713 30.7916 65.4369C30.7916 64.6817 30.1875 64.093 29.4427 64.093Z" fill="currentColor"/>
+        <path d="M29.4427 80.1196C28.6979 80.1196 28.0938 80.7186 28.0938 81.453V88.1352C28.0938 88.8696 28.6927 89.4686 29.4427 89.4686C30.1875 89.4686 30.7916 88.8696 30.7916 88.1352V81.453C30.7916 80.7082 30.1875 80.1196 29.4427 80.1196Z" fill="currentColor"/>
+        <path d="M45.7505 38.7075C40.365 38.7075 35.8859 44.0565 35.0422 51.0253C31.7245 49.5722 27.6047 50.6138 25.2558 51.4523C24.5475 44.2805 20.0006 38.7179 14.4954 38.7179C8.51099 38.7179 3.63086 45.3065 3.63086 53.4113C3.63086 61.5161 8.49539 68.1046 14.4954 68.1046C20.2662 68.1046 24.9902 61.9849 25.3235 54.2926C27.1621 53.5322 32.1099 51.8551 34.9121 54.053C35.1673 61.8551 39.9277 68.0944 45.7506 68.0944C51.735 68.0944 56.6151 61.5058 56.6151 53.401C56.6151 45.2917 51.7347 38.7075 45.7505 38.7075ZM14.4958 65.4262C9.99059 65.4262 6.33433 60.0407 6.33433 53.4002C6.33433 46.7597 10.001 41.3742 14.4958 41.3742C18.9906 41.3742 22.6573 46.7701 22.6573 53.4002C22.6573 60.0253 18.9906 65.4262 14.4958 65.4262ZM45.7505 65.4262C41.2453 65.4262 37.589 60.0407 37.589 53.4002C37.589 46.7751 41.2557 41.3742 45.7505 41.3742C50.2557 41.3742 53.9119 46.7597 53.9119 53.4002C53.9119 60.0407 50.2453 65.4262 45.7505 65.4262Z" fill="currentColor"/>
+        <path d="M88.7356 2.42666C76.9908 -1.37547 74.2823 10.6559 74.2823 10.6559C66.3083 3.61426 47.9903 -3.05214 33.6156 1.48399C18.3503 6.29653 1.97559 13.5777 3.09426 36.1347C1.85467 42.9628 -0.83801 59.8173 0.255723 71.5613C2.16199 92.1493 13.2713 102.16 34.2037 102.16C50.8184 102.16 64.3397 88.6293 69.3917 78.1867C74.5792 76.3325 78.3657 70.7752 78.3657 70.7752C78.3657 70.7752 75.6469 78.7908 73.6053 88.4152C72.1523 95.2955 72.0064 102.431 72.0324 105.937C72.048 107.338 72.7772 108.655 74.0168 109.348C81.8553 113.759 90.0581 111.817 93.1208 109.655C94.7719 108.483 95.5219 106.39 94.9489 104.468C92.2823 95.3324 94.1208 68.0665 101.454 44.0558C109.605 17.3318 96.1885 4.83715 88.7353 2.42515L88.7356 2.42666ZM70.7769 65.7867C69.6728 65.719 68.7248 66.5471 68.6728 67.6408C68.5686 69.9064 68.2353 73.4949 67.2873 76.3231C62.954 85.922 49.834 99.4951 34.2087 99.4951C14.9273 99.4951 4.70332 90.2815 2.94332 71.3231C1.71415 58.0157 5.63599 37.1257 6.23506 34.0417C12.2559 20.6404 21.6724 18.4951 24.0057 17.3337C27.4588 15.6411 43.1937 7.41186 55.2604 34.6937C59.0208 43.1885 62.0468 48.4537 65.4896 50.5737C66.651 51.2925 68.1823 50.9071 68.8385 49.7352C70.4271 46.8393 74.0677 41.7873 79.0521 44.7196C85.4011 48.48 80.8029 66.3493 70.7769 65.7867Z" fill="currentColor"/>
+      </svg>
+      Contact Samantha
+    </li>
+    <li class="settings-dropdown-item" id="resetReferences">
+      <svg width="20" height="22" viewBox="0 0 101 84" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M58.9994 58.3333C53.5827 58.3333 48.9994 61.6666 47.3327 66.6666H0.666016V74.9999H47.3327C48.9994 79.9999 53.5827 83.3333 58.9994 83.3333C64.416 83.3333 68.9994 79.9999 70.666 74.9999H100.666V66.6666H70.666C68.9994 61.6666 64.416 58.3333 58.9994 58.3333Z" fill="currentColor"/>
+        <path d="M29.8327 29.1667C24.416 29.1667 19.8327 32.5001 18.166 37.5001H0.666016V45.8334H18.166C19.8327 50.8334 24.416 54.1667 29.8327 54.1667C35.2493 54.1667 39.8327 50.8334 41.4994 45.8334H100.666V37.5001H41.4994C39.8327 32.5001 35.2493 29.1667 29.8327 29.1667Z" fill="currentColor"/>
+        <path d="M87.3327 8.33333C85.666 3.33333 81.0827 0 75.666 0C70.2494 0 65.666 3.33333 63.9994 8.33333H0.666016V16.6667H63.9994C65.666 21.6667 70.2494 25 75.666 25C81.0827 25 85.666 21.6667 87.3327 16.6667H100.666V8.33333H87.3327Z" fill="currentColor"/>
+      </svg>
+      Reset References
+    </li>
+    <li class="settings-dropdown-item" id="about">
+      <svg width="18" height="18" viewBox="0 0 122 124" fill="none" xmlns="http://www.w3.org/2000/svg" class="settings-icon">
+        <path d="M104.413 93.322C104.413 93.3429 104.424 93.3585 104.424 93.3741L104.293 94.8116V94.8168C104.288 94.8272 104.293 94.8272 104.293 94.8324L104.13 96.2647C104.13 96.2647 104.13 96.2699 104.125 96.2699C104.125 96.2751 104.13 96.2751 104.13 96.2803L103.929 97.7126V97.723C103.924 97.7282 103.929 97.7282 103.929 97.7334L103.69 99.1605L103.685 99.1657V99.1761L103.418 100.598C103.418 100.603 103.413 100.603 103.413 100.608V100.619L103.108 102.035L103.103 102.041V102.051L102.761 103.463V103.468V103.478L102.385 104.879C102.385 104.884 102.38 104.884 102.38 104.89V104.9L101.967 106.291C101.967 106.296 101.967 106.296 101.961 106.296V106.306L101.516 107.692C101.516 107.692 101.516 107.697 101.51 107.697V107.707L101.032 109.077V109.082C101.027 109.088 101.027 109.093 101.027 109.098L100.516 110.457C100.51 110.468 100.505 110.468 100.499 110.478C100.494 110.489 100.494 110.504 100.494 110.509L100.124 111.27C100.124 111.275 100.119 111.275 100.119 111.28V111.291L99.7275 112.046C99.7275 112.051 99.722 112.056 99.722 112.056C99.7166 112.062 99.722 112.062 99.722 112.067L99.3035 112.806C99.2981 112.812 99.2981 112.817 99.2926 112.817V112.827L98.8524 113.556L98.8415 113.567V113.577L98.3795 114.291C98.374 114.296 98.3686 114.301 98.3686 114.301C98.3631 114.301 98.3686 114.306 98.3631 114.306L97.8794 115.009C97.8739 115.015 97.8685 115.02 97.8685 115.02C97.8631 115.02 97.8685 115.025 97.8631 115.03L97.3576 115.718C97.3521 115.723 97.3467 115.728 97.3467 115.728C97.3413 115.728 97.3467 115.733 97.3413 115.739L96.8086 116.411C96.8031 116.416 96.7977 116.416 96.7977 116.416C96.7923 116.416 96.7977 116.421 96.7923 116.426L96.2433 117.082C96.2378 117.088 96.2324 117.088 96.2324 117.093C96.227 117.093 96.2324 117.098 96.227 117.103L95.6562 117.744L95.6454 117.754V117.759L95.0529 118.384C95.0529 118.39 95.042 118.384 95.042 118.39C95.0366 118.395 95.042 118.4 95.0366 118.4L94.4224 119.004C94.4169 119.009 94.4115 119.004 94.406 119.009C94.4006 119.015 94.4006 119.02 94.4006 119.025L93.8027 119.562C93.7973 119.572 93.7864 119.567 93.7809 119.572C93.7701 119.582 93.7755 119.588 93.7701 119.593L93.1396 120.103C93.1341 120.108 93.1233 120.103 93.1178 120.114C93.1069 120.119 93.1124 120.124 93.1069 120.129L92.4438 120.603C92.4384 120.608 92.4275 120.603 92.4221 120.614C92.4166 120.614 92.4166 120.624 92.4112 120.624L91.7263 121.056C91.7154 121.067 91.71 121.062 91.6991 121.067C91.6937 121.072 91.6937 121.077 91.6883 121.082L90.9708 121.478C90.9653 121.478 90.9599 121.478 90.9545 121.483C90.949 121.489 90.9436 121.494 90.9327 121.499L90.1935 121.853C90.1826 121.858 90.1772 121.853 90.1717 121.858C90.1663 121.864 90.1609 121.864 90.1554 121.869L89.3944 122.176C89.389 122.176 89.3836 122.176 89.3781 122.181C89.3727 122.181 89.3618 122.192 89.3564 122.192L88.5791 122.457C88.5737 122.463 88.5628 122.463 88.5574 122.463C88.5519 122.468 88.5465 122.473 88.5411 122.473L87.7529 122.702C87.742 122.702 87.7366 122.702 87.7257 122.707C87.7203 122.707 87.7149 122.713 87.7094 122.713L86.905 122.895C86.8941 122.9 86.8887 122.9 86.8778 122.9C86.8723 122.9 86.8669 122.905 86.8615 122.905L86.0461 123.041H86.019C86.0135 123.046 86.0135 123.046 86.0081 123.046L85.1873 123.134C85.1764 123.14 85.1656 123.14 85.1547 123.14H85.1438L84.3339 123.176H84.3068H84.3013H84.285L83.4697 123.155H83.4642C83.4479 123.155 83.4371 123.155 83.4153 123.15L82.6054 123.072C82.6 123.072 82.5946 123.067 82.5891 123.067C82.5782 123.067 82.5728 123.067 82.5619 123.062L81.7629 122.931C81.752 122.931 81.752 122.926 81.7466 122.926C81.7357 122.926 81.7249 122.926 81.714 122.921L80.9258 122.739C80.9204 122.733 80.9149 122.728 80.9095 122.728C80.8986 122.723 80.8878 122.728 80.8769 122.723L80.105 122.483C80.0942 122.478 80.0887 122.473 80.0833 122.473C80.0724 122.468 80.067 122.473 80.0561 122.468L79.2951 122.181C79.2843 122.176 79.2788 122.171 79.268 122.166C79.2625 122.16 79.2516 122.16 79.2462 122.155L78.5178 121.812C78.507 121.806 78.507 121.801 78.4961 121.796C78.4852 121.791 78.4798 121.796 78.4744 121.791L77.7677 121.4C77.7569 121.395 77.7569 121.39 77.7514 121.384C77.7406 121.379 77.7297 121.379 77.7243 121.379L77.0502 120.942C77.0448 120.937 77.0448 120.926 77.0394 120.921C77.0285 120.916 77.0176 120.916 77.0122 120.911L76.3708 120.431C76.3654 120.421 76.3654 120.416 76.3599 120.411C76.3545 120.4 76.3436 120.405 76.3382 120.4L75.7348 119.879C75.724 119.869 75.7294 119.858 75.724 119.853C75.7185 119.843 75.7022 119.848 75.6968 119.843L74.7184 118.853C74.7129 118.843 74.7129 118.838 74.7075 118.832C74.6966 118.822 74.6858 118.822 74.6803 118.812L73.7835 117.749C73.778 117.744 73.778 117.739 73.778 117.728C73.7726 117.723 73.7563 117.718 73.7509 117.707L72.9464 116.577C72.941 116.572 72.9464 116.567 72.941 116.556C72.9355 116.551 72.9247 116.546 72.9192 116.535L72.2017 115.353C72.1963 115.348 72.2017 115.338 72.1963 115.332C72.1908 115.322 72.18 115.322 72.1745 115.312L71.5603 114.077C71.5549 114.067 71.5549 114.056 71.5495 114.046C71.544 114.041 71.5386 114.035 71.5331 114.03L71.0222 112.754C71.0168 112.744 71.0168 112.733 71.0113 112.728C71.0113 112.718 71.0059 112.718 71.0004 112.707L70.5982 111.4C70.5928 111.39 70.5982 111.379 70.5928 111.369C70.5928 111.358 70.5874 111.358 70.5819 111.353L70.283 110.015C70.2775 110.004 70.283 109.994 70.283 109.983C70.2775 109.978 70.2721 109.973 70.2721 109.968L70.0818 108.614C70.0818 108.603 70.0873 108.588 70.0873 108.577C70.0873 108.572 70.0764 108.567 70.0764 108.562L70.0003 107.202C70.0003 107.187 70.0057 107.181 70.0057 107.171C70.0057 107.166 70.0003 107.155 70.0003 107.15L70.0384 105.786C70.0384 105.78 70.0438 105.775 70.0438 105.77C70.0438 105.76 70.0384 105.749 70.0384 105.739L70.1851 104.379V104.374V104.369L70.3862 102.702C70.3862 102.692 70.3917 102.692 70.3917 102.687V102.671L70.6689 101.015C70.6689 101.004 70.6743 101.004 70.6743 100.999V100.984L71.0331 99.3429C71.0331 99.3377 71.0385 99.3325 71.0385 99.3273V99.3116L71.4734 97.6814C71.4734 97.6762 71.4788 97.671 71.4788 97.6658V97.6501L71.9897 96.046C71.9952 96.0408 72.0006 96.0408 72.0006 96.0356C72.0006 96.0252 72.0006 96.0252 72.006 96.0148L72.5985 94.4314C72.5985 94.4262 72.604 94.4262 72.604 94.4158C72.6094 94.4106 72.604 94.4054 72.6094 94.4054L73.278 92.8532C73.278 92.848 73.2834 92.8428 73.2888 92.8428C73.2888 92.8324 73.2888 92.8324 73.2943 92.822L74.0335 91.296C74.0335 91.2908 74.0389 91.2908 74.0389 91.2856C74.0444 91.2804 74.0444 91.2752 74.0444 91.2647L74.8489 89.7803C74.8543 89.7751 74.8597 89.7751 74.8597 89.7699C74.8652 89.7647 74.8597 89.7543 74.8652 89.7543L75.7457 88.3012C75.7512 88.296 75.7566 88.296 75.762 88.2908C75.7675 88.2856 75.762 88.2804 75.7675 88.2752L76.7133 86.8637C76.7187 86.8585 76.7241 86.8585 76.7296 86.8533C76.735 86.8429 76.7296 86.8429 76.735 86.8325L77.7515 85.4679C77.7569 85.4627 77.7623 85.4627 77.7678 85.4575C77.8656 85.3325 78.0015 85.2544 78.1591 85.2179C78.1754 85.2127 78.1863 85.2075 78.2026 85.2075C78.295 85.1919 78.3929 85.1971 78.4907 85.2231L103.957 92.7179C103.978 92.7284 103.989 92.744 104.011 92.744C104.055 92.7648 104.093 92.7804 104.131 92.8065C104.163 92.8325 104.196 92.8482 104.228 92.8794C104.261 92.9054 104.283 92.9419 104.31 92.9732C104.337 93.0044 104.353 93.0409 104.37 93.0721C104.386 93.1086 104.397 93.1502 104.408 93.1919C104.408 93.2388 104.413 93.2804 104.413 93.322Z" class="icon-path" fill="currentColor"/>
+        <path d="M121.044 35.0206V35.0258L121.023 37.2133V37.2185V37.2237L120.952 39.4112V39.4164C120.946 39.4216 120.952 39.4268 120.952 39.4268L120.832 41.6091L120.827 41.6143C120.827 41.6195 120.832 41.6247 120.832 41.6247L120.664 43.8018L120.658 43.807V43.8174L120.446 45.9893V45.9945V45.9997L120.185 48.1716C120.185 48.1768 120.175 48.182 120.175 48.1872C120.175 48.2028 120.18 48.2132 120.175 48.2288L119.642 50.708C119.642 50.708 119.636 50.7081 119.636 50.7133V50.7185L119.071 53.1925C119.071 53.1977 119.071 53.1977 119.066 53.1977V53.2081L118.451 55.6717C118.451 55.6769 118.451 55.6769 118.446 55.6769V55.6873L117.794 58.1404V58.1456C117.788 58.1456 117.794 58.1508 117.788 58.1508L117.098 60.5883L117.093 60.5935V60.5987L116.359 63.0257C116.359 63.031 116.353 63.031 116.353 63.031V63.0414L115.576 65.4632L115.571 65.4684V65.4789L114.75 67.8851C114.744 67.8903 114.75 67.8956 114.744 67.8956L113.891 70.2914V70.2966V70.307L112.994 72.6873L112.989 72.6925V72.7029L112.048 75.0675V75.0727C112.043 75.0727 112.048 75.0779 112.043 75.0779L111.065 77.432C111.059 77.4424 111.054 77.4476 111.048 77.4529C111.043 77.4685 111.043 77.4789 111.037 77.4841L110.755 78.0258C110.749 78.031 110.744 78.031 110.744 78.0362C110.744 78.0414 110.749 78.0466 110.744 78.0466L110.434 78.5779C110.434 78.5831 110.429 78.5831 110.429 78.5883V78.5935L110.108 79.1143C110.102 79.1195 110.097 79.1247 110.097 79.1247C110.092 79.1299 110.097 79.1351 110.092 79.1351L109.755 79.6508C109.755 79.656 109.749 79.656 109.744 79.6612V79.6716L109.39 80.1768C109.385 80.182 109.38 80.182 109.38 80.1872V80.1976L109.004 80.6924C109.004 80.6976 108.999 80.7029 108.994 80.7029V80.7133L108.608 81.1924C108.602 81.1976 108.597 81.1976 108.597 81.2029V81.2081L108.2 81.682C108.195 81.6872 108.189 81.6872 108.189 81.6924C108.189 81.6976 108.189 81.6977 108.184 81.7029L107.771 82.1612C107.771 82.1664 107.765 82.1664 107.76 82.1664V82.1768L107.33 82.6247C107.325 82.6247 107.325 82.6247 107.319 82.6299C107.319 82.6299 107.319 82.6404 107.314 82.6404L106.874 83.0727C106.868 83.0779 106.863 83.0779 106.863 83.0779C106.857 83.0831 106.857 83.0831 106.857 83.0883L106.401 83.5102C106.39 83.5206 106.379 83.5154 106.368 83.5206C106.249 83.6247 106.107 83.6925 105.939 83.6925C105.884 83.6925 105.83 83.682 105.776 83.6716L80.691 77.6352C80.6639 77.63 80.6367 77.6092 80.6095 77.5988C80.5715 77.5831 80.528 77.5727 80.4954 77.5467C80.4573 77.5206 80.4301 77.4998 80.3975 77.4685C80.3703 77.4373 80.3432 77.4165 80.316 77.38C80.2888 77.3435 80.2725 77.3071 80.2562 77.2706C80.2399 77.2342 80.2236 77.1977 80.2127 77.156C80.2018 77.1144 80.2018 77.0727 80.2018 77.031C80.2018 77.005 80.191 76.9738 80.191 76.9425L80.4138 75.1821L80.5443 73.4321L80.5823 71.6925L80.5334 69.9529L80.3867 68.1769L80.1584 66.4425L79.8377 64.7185L79.4354 63.0258L78.9354 61.3228L78.3483 59.6613L77.6906 58.0362L76.3643 55.2029C76.3589 55.1925 76.3589 55.1873 76.3589 55.1821C76.3589 55.1769 76.3535 55.1769 76.3535 55.1717L75.8425 53.9321C75.8371 53.9269 75.8371 53.9165 75.8371 53.9112C75.8371 53.906 75.8262 53.906 75.8262 53.9008L75.3805 52.6404C75.3805 52.6352 75.3805 52.6248 75.3751 52.6196C75.3751 52.6144 75.3696 52.6144 75.3696 52.6092L74.9891 51.3331C74.9837 51.3227 74.9891 51.3175 74.9837 51.3123C74.9837 51.3071 74.9783 51.3071 74.9783 51.3019L74.6576 50.005V49.9842C74.6576 49.9789 74.6521 49.9789 74.6521 49.9737L74.3912 48.6664C74.3858 48.656 74.3912 48.6508 74.3912 48.6456C74.3858 48.6404 74.3858 48.6404 74.3803 48.6352L74.1901 47.3175V47.2967C74.1901 47.2914 74.1847 47.2914 74.1847 47.2862L74.0542 45.9581C74.0542 45.9529 74.0596 45.9477 74.0596 45.9373C74.0596 45.9321 74.0542 45.9321 74.0542 45.9269L73.989 44.5987V44.5831C73.989 44.5779 73.9835 44.5727 73.9835 44.5623L73.989 43.2342V43.2185C73.9944 43.2133 73.989 43.2133 73.989 43.2029L74.0596 41.8748C74.0596 41.8696 74.0651 41.8644 74.0651 41.8592C74.0651 41.854 74.0596 41.8488 74.0596 41.8436L74.1955 40.5154C74.1955 40.5102 74.201 40.5102 74.201 40.5102V40.4998L74.4075 38.9425V38.9373V38.9321L74.6413 37.3747V37.3695V37.3643L74.8913 35.8174V35.8122V35.8017L75.1631 34.2601V34.2549V34.2497L75.462 32.7028C75.462 32.7028 75.4675 32.7028 75.4675 32.6976V32.6924L75.7827 31.156C75.7827 31.156 75.7882 31.156 75.7882 31.1508V31.1456L76.1306 29.6144V29.6092V29.6039L76.4948 28.0779C76.4948 28.0727 76.4948 28.0727 76.5002 28.0727C76.5002 28.0675 76.4948 28.0675 76.5002 28.0623L76.8861 26.5363C76.8861 26.5311 76.8916 26.5311 76.8916 26.5311V26.5259L77.2938 25.0051C77.2938 25.0051 77.2992 25.0051 77.2992 24.9999V24.9947L77.7721 23.4426V23.4373V23.4321L78.2233 21.9269C78.2233 21.9217 78.2287 21.9217 78.2287 21.9165V21.9113L78.7071 20.4738C78.7071 20.4686 78.7125 20.4686 78.7125 20.4634C78.7179 20.4582 78.7125 20.453 78.7179 20.453L79.2452 19.0363C79.2506 19.0311 79.256 19.0259 79.256 19.0207C79.256 19.0155 79.256 19.0103 79.2615 19.0103L79.8485 17.6092C79.854 17.604 79.854 17.604 79.8594 17.5988C79.8594 17.5936 79.8594 17.5884 79.8648 17.5832L80.5117 16.2083C80.5117 16.2031 80.5171 16.2031 80.5171 16.1978C80.5171 16.1926 80.5171 16.1874 80.5225 16.1822L81.2183 14.8281C81.2237 14.8229 81.2292 14.8229 81.2292 14.8177V14.8073L81.9793 13.4843C81.9847 13.4791 81.9901 13.4791 81.9901 13.4739C81.9901 13.4687 81.9847 13.4635 81.9901 13.4583L82.7946 12.1614C82.8 12.1562 82.8055 12.151 82.8109 12.1458V12.1406L83.6643 10.875C83.6697 10.8697 83.6752 10.8697 83.6752 10.8645V10.8541L84.5829 9.61975C84.5883 9.61454 84.5938 9.61975 84.5938 9.61454C84.5992 9.60933 84.5938 9.60412 84.5992 9.59891L85.5559 8.40099C85.5613 8.39578 85.5667 8.39578 85.5667 8.39578C85.5722 8.39057 85.5667 8.38537 85.5722 8.38016L86.5778 7.2187C86.5778 7.2135 86.5886 7.2135 86.5941 7.2135C86.5995 7.20829 86.5941 7.20308 86.5995 7.19787L87.6486 6.07287C87.6594 6.06246 87.6812 6.06246 87.6921 6.05204C87.7029 6.04162 87.7029 6.026 87.7138 6.01037L89.6761 4.39584C89.6924 4.38542 89.7087 4.39063 89.725 4.38021C89.7413 4.3698 89.7413 4.34896 89.7576 4.33855L91.9481 3.02084C91.9536 3.01563 91.9699 3.02084 91.9753 3.01563C91.9971 3.00001 92.0079 2.98438 92.0351 2.97917L94.405 1.97917C94.4159 1.97396 94.4213 1.98438 94.4322 1.97917C94.4539 1.96876 94.4702 1.95313 94.4974 1.94792L96.9705 1.31771C96.9868 1.3125 97.0031 1.31771 97.0194 1.3125C97.0358 1.30729 97.0521 1.29688 97.0684 1.29688L99.6395 1.00521C99.6666 1 99.6884 1.01042 99.7101 1.01042C99.721 1.01042 99.7264 1 99.7373 1L102.319 1.07292C102.341 1.07292 102.363 1.08333 102.39 1.08854C102.401 1.08854 102.406 1.07813 102.417 1.07813L104.972 1.52083C104.988 1.52083 104.999 1.53125 105.015 1.54167C105.032 1.54687 105.048 1.54167 105.064 1.54687L107.516 2.33854C107.537 2.34896 107.554 2.36458 107.575 2.375C107.586 2.38021 107.597 2.36979 107.603 2.375L109.913 3.48959C109.929 3.5 109.929 3.51563 109.945 3.53125C109.962 3.53646 109.978 3.53125 109.994 3.54167L112.103 4.97914C112.12 4.98955 112.114 5.01039 112.13 5.0208C112.141 5.03122 112.163 5.02601 112.179 5.04164L114.044 6.76044C114.055 6.77085 114.055 6.79169 114.065 6.8021C114.076 6.81773 114.098 6.81252 114.109 6.82815L115.691 8.79175C115.707 8.81258 115.696 8.83862 115.712 8.86466C115.729 8.88549 115.756 8.8907 115.767 8.91675L116.256 9.93757C116.261 9.94278 116.256 9.94278 116.261 9.94799H116.267L116.729 10.9792V10.9845C116.729 10.9897 116.734 10.9897 116.734 10.9897L117.175 12.0261V12.0313C117.175 12.0365 117.18 12.0365 117.18 12.0365L117.604 13.0834C117.609 13.0886 117.609 13.0938 117.609 13.0938C117.609 13.099 117.615 13.099 117.615 13.099L118.012 14.1563V14.1615C118.012 14.1667 118.017 14.1667 118.017 14.172L118.392 15.2345V15.2449C118.392 15.2449 118.398 15.2449 118.398 15.2501L118.751 16.3178V16.3282L118.756 16.3334L119.088 17.4115V17.4167C119.088 17.4167 119.088 17.422 119.093 17.422L119.403 18.5053V18.5157L119.409 18.5209L119.691 19.6095V19.6199L119.697 19.6251L119.958 20.7188V20.724V20.7345L120.197 21.8334C120.202 21.8438 120.197 21.8542 120.197 21.8647C120.202 21.8751 120.208 21.8803 120.208 21.8907L120.469 24.0626V24.073V24.0782L120.68 26.2501V26.2605L120.686 26.2657L120.854 28.4428C120.854 28.448 120.849 28.448 120.849 28.4532C120.849 28.4584 120.854 28.4584 120.854 28.4584L120.974 30.6406V30.6459V30.6511L121.045 32.8333V32.8437V32.849L121.066 35.0364C121.045 35.0156 121.044 35.0154 121.044 35.0206Z" class="icon-path" fill="currentColor"/>
+        <path d="M15.9577 92.322C15.9577 92.3429 15.9473 92.3585 15.9473 92.3741L16.0723 93.8116V93.8168C16.0775 93.8272 16.0723 93.8272 16.0723 93.8324L16.2285 95.2647C16.2285 95.2647 16.2285 95.2699 16.2337 95.2699C16.2337 95.2751 16.2285 95.2751 16.2285 95.2803L16.4212 96.7126V96.723C16.4264 96.7282 16.4212 96.7282 16.4212 96.7334L16.6504 98.1605L16.6556 98.1657V98.1761L16.9108 99.598C16.9108 99.6032 16.916 99.6032 16.916 99.6084V99.6188L17.2077 101.035L17.2129 101.041V101.051L17.541 102.463V102.468V102.478L17.9004 103.879C17.9004 103.884 17.9056 103.884 17.9056 103.89V103.9L18.3014 105.291C18.3014 105.296 18.3014 105.296 18.3067 105.296V105.306L18.7337 106.692C18.7337 106.692 18.7337 106.697 18.7389 106.697V106.707L19.1973 108.077V108.082C19.2025 108.088 19.2025 108.093 19.2025 108.098L19.6921 109.457C19.6973 109.468 19.7025 109.468 19.7077 109.478C19.7129 109.489 19.7129 109.504 19.7129 109.509L20.0671 110.27C20.0671 110.275 20.0723 110.275 20.0723 110.28V110.291L20.4473 111.046C20.4473 111.051 20.4525 111.056 20.4525 111.056C20.4577 111.062 20.4525 111.062 20.4525 111.067L20.8535 111.806C20.8587 111.812 20.8587 111.817 20.8639 111.817V111.827L21.2858 112.556L21.2962 112.567V112.577L21.7389 113.291C21.7442 113.296 21.7494 113.301 21.7494 113.301C21.7546 113.301 21.7494 113.306 21.7546 113.306L22.2181 114.009C22.2233 114.015 22.2285 114.02 22.2285 114.02C22.2337 114.02 22.2285 114.025 22.2337 114.03L22.7181 114.718C22.7233 114.723 22.7285 114.728 22.7285 114.728C22.7337 114.728 22.7285 114.733 22.7337 114.739L23.2442 115.411C23.2494 115.416 23.2546 115.416 23.2546 115.416C23.2598 115.416 23.2546 115.421 23.2598 115.426L23.7858 116.082C23.791 116.088 23.7962 116.088 23.7962 116.093C23.8014 116.093 23.7962 116.098 23.8014 116.103L24.3483 116.744L24.3587 116.754V116.759L24.9264 117.384C24.9264 117.39 24.9369 117.384 24.9369 117.39C24.9421 117.395 24.9369 117.4 24.9421 117.4L25.5306 118.004C25.5358 118.009 25.541 118.004 25.5462 118.009C25.5514 118.015 25.5514 118.02 25.5514 118.025L26.1244 118.562C26.1296 118.572 26.14 118.567 26.1452 118.572C26.1556 118.582 26.1504 118.588 26.1556 118.593L26.7598 119.103C26.765 119.108 26.7754 119.103 26.7806 119.114C26.791 119.119 26.7858 119.124 26.791 119.129L27.4264 119.603C27.4317 119.608 27.4421 119.603 27.4473 119.614C27.4525 119.614 27.4525 119.624 27.4577 119.624L28.1139 120.056C28.1244 120.067 28.1296 120.062 28.14 120.067C28.1452 120.072 28.1452 120.077 28.1504 120.082L28.8379 120.478C28.8431 120.478 28.8483 120.478 28.8535 120.483C28.8587 120.489 28.8639 120.494 28.8744 120.499L29.5827 120.853C29.5931 120.858 29.5983 120.853 29.6035 120.858C29.6087 120.864 29.6139 120.864 29.6191 120.869L30.3483 121.176C30.3535 121.176 30.3587 121.176 30.3639 121.181C30.3692 121.181 30.3796 121.192 30.3848 121.192L31.1296 121.457C31.1348 121.463 31.1452 121.463 31.1504 121.463C31.1556 121.468 31.1608 121.473 31.166 121.473L31.9212 121.702C31.9317 121.702 31.9369 121.702 31.9473 121.707C31.9525 121.707 31.9577 121.713 31.9629 121.713L32.7337 121.895C32.7441 121.9 32.7494 121.9 32.7598 121.9C32.765 121.9 32.7702 121.905 32.7754 121.905L33.5567 122.041H33.5827C33.5879 122.046 33.5879 122.046 33.5931 122.046L34.3796 122.134C34.39 122.14 34.4004 122.14 34.4108 122.14H34.4212L35.1973 122.176H35.2233H35.2285H35.2441L36.0254 122.155H36.0306C36.0462 122.155 36.0566 122.155 36.0775 122.15L36.8535 122.072C36.8587 122.072 36.8639 122.067 36.8691 122.067C36.8796 122.067 36.8848 122.067 36.8952 122.062L37.6608 121.931C37.6712 121.931 37.6712 121.926 37.6764 121.926C37.6869 121.926 37.6973 121.926 37.7077 121.921L38.4629 121.739C38.4681 121.733 38.4733 121.728 38.4785 121.728C38.4889 121.723 38.4994 121.728 38.5098 121.723L39.2494 121.483C39.2598 121.478 39.265 121.473 39.2702 121.473C39.2806 121.468 39.2858 121.473 39.2962 121.468L40.0254 121.181C40.0358 121.176 40.041 121.171 40.0515 121.166C40.0567 121.16 40.0671 121.16 40.0723 121.155L40.7702 120.812C40.7806 120.806 40.7806 120.801 40.791 120.796C40.8015 120.791 40.8067 120.796 40.8119 120.791L41.489 120.4C41.4994 120.395 41.4994 120.39 41.5046 120.384C41.515 120.379 41.5254 120.379 41.5306 120.379L42.1765 119.942C42.1817 119.937 42.1817 119.926 42.1869 119.921C42.1973 119.916 42.2077 119.916 42.2129 119.911L42.8275 119.431C42.8327 119.421 42.8327 119.416 42.8379 119.411C42.8431 119.4 42.8535 119.405 42.8588 119.4L43.4369 118.879C43.4473 118.869 43.4421 118.858 43.4473 118.853C43.4525 118.843 43.4681 118.848 43.4733 118.843L44.4108 117.853C44.416 117.843 44.416 117.838 44.4212 117.832C44.4317 117.822 44.4421 117.822 44.4473 117.812L45.3067 116.749C45.3119 116.744 45.3119 116.739 45.3119 116.728C45.3171 116.723 45.3327 116.718 45.3379 116.707L46.1087 115.577C46.1139 115.572 46.1087 115.567 46.1139 115.556C46.1191 115.551 46.1296 115.546 46.1348 115.535L46.8223 114.353C46.8275 114.348 46.8223 114.338 46.8275 114.332C46.8327 114.322 46.8431 114.322 46.8483 114.312L47.4369 113.077C47.4421 113.067 47.4421 113.056 47.4473 113.046C47.4525 113.041 47.4577 113.035 47.4629 113.03L47.9525 111.754C47.9577 111.744 47.9577 111.733 47.9629 111.728C47.9629 111.718 47.9681 111.718 47.9733 111.707L48.3587 110.4C48.3639 110.39 48.3587 110.379 48.3639 110.369C48.3639 110.358 48.3691 110.358 48.3744 110.353L48.6608 109.015C48.666 109.004 48.6608 108.994 48.6608 108.983C48.666 108.978 48.6712 108.973 48.6712 108.968L48.8535 107.614C48.8535 107.603 48.8483 107.588 48.8483 107.577C48.8483 107.572 48.8587 107.567 48.8587 107.562L48.9316 106.202C48.9316 106.187 48.9264 106.181 48.9264 106.171C48.9264 106.166 48.9316 106.155 48.9316 106.15L48.8952 104.786C48.8952 104.78 48.89 104.775 48.89 104.77C48.89 104.76 48.8952 104.749 48.8952 104.739L48.7546 103.379V103.374V103.369L48.5619 101.702C48.5619 101.692 48.5566 101.692 48.5566 101.687V101.671L48.291 100.015C48.291 100.004 48.2858 100.004 48.2858 99.9992V99.9836L47.9421 98.3429C47.9421 98.3377 47.9369 98.3325 47.9369 98.3273V98.3116L47.5202 96.6814C47.5202 96.6762 47.515 96.671 47.515 96.6658V96.6501L47.0254 95.046C47.0202 95.0408 47.015 95.0408 47.015 95.0356C47.015 95.0252 47.015 95.0252 47.0098 95.0148L46.4421 93.4314C46.4421 93.4262 46.4369 93.4262 46.4369 93.4158C46.4316 93.4106 46.4369 93.4054 46.4316 93.4054L45.791 91.8532C45.791 91.848 45.7858 91.8428 45.7806 91.8428C45.7806 91.8324 45.7806 91.8324 45.7754 91.822L45.0671 90.296C45.0671 90.2908 45.0619 90.2908 45.0619 90.2856C45.0566 90.2804 45.0566 90.2752 45.0566 90.2647L44.2858 88.7803C44.2806 88.7751 44.2754 88.7751 44.2754 88.7699C44.2702 88.7647 44.2754 88.7543 44.2702 88.7543L43.4264 87.3012C43.4212 87.296 43.416 87.296 43.4108 87.2908C43.4056 87.2856 43.4108 87.2804 43.4056 87.2752L42.4994 85.8637C42.4941 85.8585 42.4889 85.8585 42.4837 85.8533C42.4785 85.8429 42.4837 85.8429 42.4785 85.8325L41.5046 84.4679C41.4994 84.4627 41.4941 84.4627 41.4889 84.4575C41.3952 84.3325 41.265 84.2544 41.1139 84.2179C41.0983 84.2127 41.0879 84.2075 41.0723 84.2075C40.9837 84.1919 40.89 84.1971 40.7962 84.2231L16.3949 91.7179C16.3741 91.7284 16.3636 91.744 16.3428 91.744C16.3011 91.7648 16.2647 91.7804 16.2282 91.8065C16.197 91.8325 16.1657 91.8482 16.1345 91.8794C16.1032 91.9054 16.0824 91.9419 16.0564 91.9732C16.0303 92.0044 16.0147 92.0409 15.9991 92.0721C15.9834 92.1086 15.973 92.1502 15.9626 92.1919C15.9626 92.2388 15.9577 92.2804 15.9577 92.322Z" class="icon-path" fill="currentColor"/>
+        <path d="M0.0212173 34.0206V34.0258L0.0420507 36.2133V36.2185V36.2237L0.109759 38.4112V38.4164C0.114967 38.4216 0.109759 38.4268 0.109759 38.4268L0.224342 40.6091L0.229551 40.6143C0.229551 40.6195 0.224342 40.6247 0.224342 40.6247L0.385796 42.8018L0.391004 42.807V42.8174L0.594124 44.9893V44.9945V44.9997L0.844124 47.1716C0.844124 47.1768 0.854541 47.182 0.854541 47.1872C0.854541 47.2028 0.849333 47.2132 0.854541 47.2288L1.36496 49.708C1.36496 49.708 1.37017 49.7081 1.37017 49.7133V49.7185L1.91183 52.1925C1.91183 52.1977 1.91183 52.1977 1.91704 52.1977V52.2081L2.50559 54.6717C2.50559 54.6769 2.50559 54.6769 2.5108 54.6769V54.6873L3.1358 57.1404V57.1456C3.14101 57.1456 3.13579 57.1508 3.141 57.1508L3.80246 59.5883L3.80767 59.5935V59.5987L4.51079 62.0257C4.51079 62.031 4.51599 62.031 4.51599 62.031V62.0414L5.26078 64.4632L5.26599 64.4684V64.4789L6.05245 66.8851C6.05766 66.8903 6.05245 66.8956 6.05766 66.8956L6.87536 69.2914V69.2966V69.307L7.73473 71.6873L7.73994 71.6925V71.7029L8.64098 74.0675V74.0727C8.64619 74.0727 8.64098 74.0779 8.64619 74.0779L9.58368 76.432C9.58889 76.4424 9.5941 76.4476 9.59931 76.4529C9.60452 76.4685 9.60452 76.4789 9.60972 76.4841L9.88055 77.0258C9.88576 77.031 9.89097 77.031 9.89097 77.0362C9.89097 77.0414 9.88576 77.0466 9.89097 77.0466L10.1878 77.5779C10.1878 77.5831 10.1931 77.5831 10.1931 77.5883V77.5935L10.5003 78.1143C10.5056 78.1195 10.5108 78.1247 10.5108 78.1247C10.516 78.1299 10.5108 78.1351 10.516 78.1351L10.8389 78.6508C10.8389 78.656 10.8441 78.656 10.8493 78.6612V78.6716L11.1879 79.1768C11.1931 79.182 11.1983 79.182 11.1983 79.1872V79.1976L11.5577 79.6924C11.5577 79.6976 11.5629 79.7029 11.5681 79.7029V79.7133L11.9379 80.1924C11.9431 80.1976 11.9483 80.1976 11.9483 80.2029V80.2081L12.3285 80.682C12.3337 80.6872 12.3389 80.6872 12.3389 80.6924C12.3389 80.6976 12.3389 80.6977 12.3441 80.7029L12.7399 81.1612C12.7399 81.1664 12.7452 81.1664 12.7504 81.1664V81.1768L13.1618 81.6247C13.167 81.6247 13.167 81.6247 13.1722 81.6299C13.1722 81.6299 13.1722 81.6404 13.1774 81.6404L13.5993 82.0727C13.6045 82.0779 13.6097 82.0779 13.6097 82.0779C13.6149 82.0831 13.6149 82.0831 13.6149 82.0883L14.0524 82.5102C14.0629 82.5206 14.0733 82.5154 14.0837 82.5206C14.1983 82.6247 14.3337 82.6925 14.4951 82.6925C14.5472 82.6925 14.5993 82.682 14.6514 82.6716L38.6874 76.6352C38.7134 76.63 38.7395 76.6092 38.7655 76.5988C38.802 76.5831 38.8436 76.5727 38.8749 76.5467C38.9114 76.5206 38.9374 76.4998 38.9686 76.4685C38.9947 76.4373 39.0207 76.4165 39.0468 76.38C39.0728 76.3435 39.0884 76.3071 39.1041 76.2706C39.1197 76.2342 39.1353 76.1977 39.1457 76.156C39.1561 76.1144 39.1561 76.0727 39.1561 76.031C39.1561 76.005 39.1666 75.9738 39.1666 75.9425L38.953 74.1821L38.828 72.4321L38.7916 70.6925L38.8384 68.9529L38.9791 67.1769L39.1978 65.4425L39.5051 63.7185L39.8905 62.0258L40.3697 60.3228L40.9322 58.6613L41.5624 57.0362L42.8332 54.2029C42.8384 54.1925 42.8384 54.1873 42.8384 54.1821C42.8384 54.1769 42.8436 54.1769 42.8436 54.1717L43.3332 52.9321C43.3384 52.9269 43.3384 52.9165 43.3384 52.9112C43.3384 52.906 43.3488 52.906 43.3488 52.9008L43.7759 51.6404C43.7759 51.6352 43.7759 51.6248 43.7811 51.6196C43.7811 51.6144 43.7863 51.6144 43.7863 51.6092L44.1509 50.3331C44.1561 50.3227 44.1509 50.3175 44.1561 50.3123C44.1561 50.3071 44.1613 50.3071 44.1613 50.3019L44.4686 49.005V48.9842C44.4686 48.9789 44.4739 48.9789 44.4739 48.9737L44.7239 47.6664C44.7291 47.656 44.7239 47.6508 44.7239 47.6456C44.7291 47.6404 44.7291 47.6404 44.7343 47.6352L44.9166 46.3175V46.2967C44.9166 46.2914 44.9218 46.2914 44.9218 46.2862L45.0468 44.9581C45.0468 44.9529 45.0416 44.9477 45.0416 44.9373C45.0416 44.9321 45.0468 44.9321 45.0468 44.9269L45.1093 43.5987V43.5831C45.1093 43.5779 45.1145 43.5727 45.1145 43.5623L45.1093 42.2342V42.2185C45.1041 42.2133 45.1093 42.2133 45.1093 42.2029L45.0416 40.8748C45.0416 40.8696 45.0364 40.8644 45.0364 40.8592C45.0364 40.854 45.0416 40.8488 45.0416 40.8436L44.9114 39.5154C44.9114 39.5102 44.9061 39.5102 44.9061 39.5102V39.4998L44.7082 37.9425V37.9373V37.9321L44.4843 36.3747V36.3695V36.3643L44.2447 34.8174V34.8122V34.8017L43.9843 33.2601V33.2549V33.2497L43.6978 31.7028C43.6978 31.7028 43.6926 31.7028 43.6926 31.6976V31.6924L43.3905 30.156C43.3905 30.156 43.3853 30.156 43.3853 30.1508V30.1456L43.0572 28.6144V28.6092V28.6039L42.7082 27.0779C42.7082 27.0727 42.7082 27.0727 42.703 27.0727C42.703 27.0675 42.7082 27.0675 42.703 27.0623L42.3332 25.5363C42.3332 25.5311 42.328 25.5311 42.328 25.5311V25.5259L41.9426 24.0051C41.9426 24.0051 41.9374 24.0051 41.9374 23.9999V23.9947L41.4843 22.4426V22.4373V22.4321L41.052 20.9269C41.052 20.9217 41.0468 20.9217 41.0468 20.9165V20.9113L40.5884 19.4738C40.5884 19.4686 40.5832 19.4686 40.5832 19.4634C40.578 19.4582 40.5832 19.453 40.578 19.453L40.0728 18.0363C40.0676 18.0311 40.0624 18.0259 40.0624 18.0207C40.0624 18.0155 40.0624 18.0103 40.0572 18.0103L39.4947 16.6092C39.4895 16.604 39.4895 16.604 39.4843 16.5988C39.4843 16.5936 39.4843 16.5884 39.4791 16.5832L38.8593 15.2083C38.8593 15.2031 38.8541 15.2031 38.8541 15.1978C38.8541 15.1926 38.8541 15.1874 38.8489 15.1822L38.1822 13.8281C38.177 13.8229 38.1718 13.8229 38.1718 13.8177V13.8073L37.453 12.4843C37.4478 12.4791 37.4426 12.4791 37.4426 12.4739C37.4426 12.4687 37.4478 12.4635 37.4426 12.4583L36.6718 11.1614C36.6666 11.1562 36.6614 11.151 36.6562 11.1458V11.1406L35.8385 9.87495C35.8333 9.86974 35.828 9.86974 35.828 9.86454V9.85412L34.9583 8.61975C34.953 8.61454 34.9478 8.61975 34.9478 8.61454C34.9426 8.60933 34.9478 8.60412 34.9426 8.59891L34.026 7.40099C34.0208 7.39578 34.0155 7.39578 34.0155 7.39578C34.0103 7.39057 34.0155 7.38537 34.0103 7.38016L33.0468 6.2187C33.0468 6.2135 33.0364 6.2135 33.0312 6.2135C33.026 6.20829 33.0312 6.20308 33.026 6.19787L32.0207 5.07287C32.0103 5.06246 31.9895 5.06246 31.9791 5.05204C31.9687 5.04162 31.9687 5.026 31.9582 5.01037L30.078 3.39584C30.0624 3.38542 30.0467 3.39063 30.0311 3.38021C30.0155 3.3698 30.0155 3.34896 29.9999 3.33855L27.9009 2.02084C27.8957 2.01563 27.8801 2.02084 27.8749 2.01563C27.854 2.00001 27.8436 1.98438 27.8176 1.97917L25.5468 0.979172C25.5364 0.973963 25.5312 0.98438 25.5207 0.979172C25.4999 0.968755 25.4843 0.953131 25.4582 0.947922L23.0885 0.317708C23.0729 0.3125 23.0573 0.317708 23.0416 0.3125C23.026 0.307291 23.0104 0.296875 22.9948 0.296875L20.5312 0.00520833C20.5051 3.33413e-07 20.4843 0.010416 20.4635 0.010416C20.453 0.010416 20.4478 0 20.4374 0L17.9634 0.072916C17.9426 0.072916 17.9217 0.0833337 17.8957 0.0885417C17.8853 0.0885417 17.8801 0.0781256 17.8697 0.0781256L15.4218 0.520832C15.4062 0.520832 15.3958 0.531248 15.3801 0.541665C15.3645 0.546873 15.3489 0.541666 15.3332 0.546874L12.9843 1.33854C12.9635 1.34896 12.9479 1.36458 12.927 1.375C12.9166 1.38021 12.9062 1.36979 12.901 1.375L10.6874 2.48959C10.6718 2.5 10.6718 2.51563 10.6561 2.53125C10.6405 2.53646 10.6249 2.53125 10.6093 2.54167L8.58846 3.97914C8.57283 3.98955 8.57804 4.01039 8.56242 4.0208C8.552 4.03122 8.53117 4.02601 8.51554 4.04164L6.72914 5.76044C6.71873 5.77085 6.71873 5.79169 6.70831 5.8021C6.69789 5.81773 6.67706 5.81252 6.66664 5.82815L5.15104 7.79175C5.13542 7.81258 5.14584 7.83862 5.13021 7.86466C5.11459 7.88549 5.08855 7.8907 5.07813 7.91675L4.60938 8.93757C4.60417 8.94278 4.60938 8.94278 4.60417 8.94799H4.59897L4.15626 9.97924V9.98445C4.15626 9.98966 4.15105 9.98966 4.15105 9.98966L3.72917 11.0261V11.0313C3.72917 11.0365 3.72396 11.0365 3.72396 11.0365L3.31771 12.0834C3.3125 12.0886 3.3125 12.0938 3.3125 12.0938C3.3125 12.099 3.30729 12.099 3.30729 12.099L2.92708 13.1563V13.1615C2.92708 13.1667 2.92187 13.1667 2.92187 13.172L2.5625 14.2345V14.2449C2.5625 14.2449 2.55729 14.2449 2.55729 14.2501L2.21874 15.3178V15.3282L2.21353 15.3334L1.89583 16.4115V16.4167C1.89583 16.4167 1.89583 16.422 1.89062 16.422L1.59374 17.5053V17.5157L1.58853 17.5209L1.31771 18.6095V18.6199L1.3125 18.6251L1.0625 19.7188V19.724V19.7345L0.833326 20.8334C0.828116 20.8438 0.833326 20.8542 0.833326 20.8647C0.828116 20.8751 0.822904 20.8803 0.822904 20.8907L0.572904 23.0626V23.073V23.0782L0.369784 25.2501V25.2605L0.364576 25.2657L0.203122 27.4428C0.203122 27.448 0.208336 27.448 0.208336 27.4532C0.208336 27.4584 0.203122 27.4584 0.203122 27.4584L0.0885417 29.6406V29.6459V29.6511L0.0208333 31.8333V31.8437V31.849L0 34.0364C0.0208333 34.0156 0.0212173 34.0154 0.0212173 34.0206Z" class="icon-path" fill="currentColor"/>
+      </svg>
+      About Unless
+    </li>
+  </ul>
+</div>
+    
+    <!-- Modal Access+ Score -->
+    <div class="accessibility-score-container">
+      <div class="score-circle" id="scoreCircle">
+        <div class="score-number" id="accessibilityScore">--</div>
+        <div class="score-percent">%</div>
+      </div>
+      <div class="score-description" id="scoreDescription">Scan a page to see results</div>
+      <button class="tell-me-button" id="tellMeButton" title="Tell me about my Multimodal Access+">
+        <svg class="play-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <svg class="pause-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="6" y="4" width="4" height="16"></rect>
+          <rect x="14" y="4" width="4" height="16"></rect>
+        </svg>
+        <svg class="resume-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+      </button>
+    </div>
+    
+    <!-- Category Navigation -->
+    <div class="sidebar-nav">
+      <div class="nav-item active" data-tab="speech">Speech</div>
+      <div class="nav-item" data-tab="vision">Vision</div>
+      <div class="nav-item" data-tab="hearing">Hearing</div>
+      <div class="nav-item" data-tab="language">Language</div>
+    </div>
+    
+    <!-- Content Container -->
+    <div class="sidebar-content" id="sidebarContent">
+      <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Waiting to analyze page...</div>
+      </div>
+      
+      <div id="speech-content" class="tab-content active"></div>
+      <div id="vision-content" class="tab-content"></div>
+      <div id="hearing-content" class="tab-content"></div>
+      <div id="language-content" class="tab-content"></div>
+      
+      <!-- New Container for Detail View -->
+      <div id="details-view" class="details-view">
+        <button class="back-button" id="backButton">← Back</button>
+        <h3 id="details-view-title"></h3>
+        <div id="details-view-content"></div>
+      </div>
+    </div>
+    
+    <!-- Footer - Simplified with just Analyze Button -->
+    <div class="sidebar-footer" style="justify-content: flex-start !important; padding-left: 15px !important;">
+      <button id="analyzeButton" style="width: 60% !important; margin-right: auto !important;">Analyze Page</button>
+    </div>
+  </div>
+  
+  <!-- Feature Selection Overlay -->
+  <div id="featureSelectionOverlay" class="feature-selection-overlay">
+    <div class="feature-selection-title">Select Features to Analyze</div>
+    <div class="feature-selection-desc">
+      Choose which multimodal features you want to detect for this webpage:
+    </div>
+    
+    <!-- Speech Features -->
+    <div class="feature-category-section">
+      <div class="feature-category-title">Speech Features</div>
+      <div class="feature-options">
+        <label class="feature-option">
+          <input type="checkbox" class="feature-option-checkbox" data-category="speech" data-feature="voiceControl" checked>
+          Voice Control
+        </label>
+        <label class="feature-option">
+          <input type="checkbox" class="feature-option-checkbox" data-category="speech" data-feature="speechToText" checked>
+          Speech-to-Text
+        </label>
+        <label class="feature-option">
+          <input type="checkbox" class="feature-option-checkbox" data-category="speech" data-feature="noSpeechOnly" checked>
+          Non-Voice Alternatives
+        </label>
+      </div>
+    </div>
+    
+    <!-- Vision Features -->
+    <div class="feature-category-section">
+      <div class="feature-category-title">Vision Features</div>
+      <div class="feature-options">
+        <label class="feature-option">
+          <input type="checkbox" class="feature-option-checkbox" data-category="vision" data-feature="screenReader" checked>
+          Screen Reader
+        </label>
+        <label class="feature-option">
+          <input type="checkbox" class="feature-option-checkbox" data-category="vision" data-feature="keyboardNavigation" checked>
+          Keyboard Navigation
+        </label>
+        <label class="feature-option">
+          <input type="checkbox" class="feature-option-checkbox" data-category="vision" data-feature="highContrast" checked>
+          High Contrast
+        </label>
+      </div>
+    </div>
+    
+    <!-- Hearing Features -->
+    <div class="feature-category-section">
+      <div class="feature-category-title">Hearing Features</div>
+      <div class="feature-options">
+        <label class="feature-option">
+          <input type="checkbox" class="feature-option-checkbox" data-category="hearing" data-feature="captions" checked>
+          Captions
+        </label>
+        <label class="feature-option">
+          <input type="checkbox" class="feature-option-checkbox" data-category="hearing" data-feature="transcripts" checked>
+          Transcripts
+        </label>
+        <label class="feature-option">
+          <input type="checkbox" class="feature-option-checkbox" data-category="hearing" data-feature="visualAlerts" checked>
+          Visual Alerts
+        </label>
+      </div>
+    </div>
+    
+    <!-- Language Features -->
+    <div class="feature-category-section">
+      <div class="feature-category-title">Language Features</div>
+      <div class="feature-options">
+        <label class="feature-option">
+          <input type="checkbox" class="feature-option-checkbox" data-category="language" data-feature="simpleLanguage" checked>
+          Simple Language
+        </label>
+        <label class="feature-option">
+          <input type="checkbox" class="feature-option-checkbox" data-category="language" data-feature="consistentNavigation" checked>
+          Consistent Navigation
+        </label>
+        <label class="feature-option">
+          <input type="checkbox" class="feature-option-checkbox" data-category="language" data-feature="errorPrevention" checked>
+          Error Prevention
+        </label>
+      </div>
+    </div>
+    
+    <div class="feature-selection-buttons">
+      <button id="startAnalysis" class="feature-selection-submit">Start Analysis</button>
+    </div>
+  </div>
+  
+  <!-- Chat Button -->
+<button id="chatButton" class="chat-button">
+  <svg width="18" height="18" viewBox="0 0 112 101" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M83.4435 22.8907H58.4435V10.6667C60.1102 10.1095 61.2247 8.44275 61.2247 6.22408C61.2247 2.89075 59.0007 0.666748 55.6674 0.666748C52.334 0.666748 50.11 2.89075 50.11 6.22408C50.11 8.44808 51.2194 10.1147 52.886 10.6667L52.8912 22.8907H27.8912C12.3339 22.8907 0.115234 35.1147 0.115234 50.6667V61.7761C0.115234 77.3334 12.3392 89.5521 27.8912 89.5521H33.4486V95.1094C33.4486 96.7761 34.5579 99.0001 36.2246 100.109C36.7766 100.667 37.8912 100.667 39.0006 100.667C40.1099 100.667 40.6672 100.667 41.2246 100.109L62.3339 89.5521L83.4432 89.5573C99.0006 89.5573 111.219 77.3333 111.219 61.7813V50.672C111.224 35.1093 99.0007 22.8907 83.4435 22.8907ZM100.11 61.7761C100.11 71.2188 92.8862 78.4428 83.4435 78.4428H61.2195C60.1101 78.4428 59.5528 78.4427 58.9955 79L44.5582 86.224V84C44.5582 80.6667 42.3342 78.4427 39.0008 78.4427H27.8915C18.4488 78.4427 11.2248 71.2187 11.2248 61.776V50.6667C11.2248 41.224 18.4488 34 27.8915 34H83.4488C92.8915 34 100.115 41.224 100.115 50.6667L100.11 61.7761Z" fill="white"/>
+    <path d="M44.5579 56.2241C44.5579 63.6304 33.4434 63.6304 33.4434 56.2241C33.4434 48.8127 44.5579 48.8127 44.5579 56.2241Z" fill="white"/>
+    <path d="M77.8919 56.2241C77.8919 63.6304 66.7773 63.6304 66.7773 56.2241C66.7773 48.8127 77.8919 48.8127 77.8919 56.2241Z" fill="white"/>
+  </svg>
+</button>
+  
+  <!-- Chat Panel - With chat within sidebar and Expert title -->
+  <div id="chatPanel" class="chat-panel">
+    <div class="chat-header">
+      <div class="chat-title">Expert</div>
+      <button id="chatClose" class="chat-close">×</button>
+    </div>
+    <div id="chatMessages" class="chat-messages">
+      <div class="chat-message assistant">
+        <div class="message-text">Hi there! I'm your multimodal accessibility expert. I can help with questions about web accessibility, multimodal integration, and adaptation strategies. How can I assist you today?</div>
+      </div>
+    </div>
+    <div class="chat-input-container">
+      <button id="chatVoice" class="chat-voice-button" title="Voice Input">
+        <svg width="18" height="18" viewBox="0 0 75 86" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M37.6673 54.6667C47.2403 54.6667 55.0007 46.9063 55.0007 37.3333V17.3333C55.0007 7.7604 47.2403 0 37.6673 0C28.0944 0 20.334 7.7604 20.334 17.3333V37.3333C20.334 46.9063 28.0944 54.6667 37.6673 54.6667ZM31.0007 17.3333C31.0007 13.6511 33.9851 10.6667 37.6673 10.6667C41.3496 10.6667 44.334 13.6511 44.334 17.3333V37.3333C44.334 41.0156 41.3496 44 37.6673 44C33.9851 44 31.0007 41.0156 31.0007 37.3333V17.3333Z" fill="white"/>
+          <path d="M64.334 34.6667V37.3334C64.334 46.8594 59.2507 55.6614 51.0007 60.4267C42.7507 65.1923 32.5847 65.1923 24.334 60.4267C16.084 55.6611 11.0007 46.8587 11.0007 37.3334V34.6667H0.333984V37.3334C0.333984 46.3126 3.56838 54.9841 9.44852 61.7708C15.3235 68.5572 23.4485 72.9999 32.3339 74.2811V85.3333H43.0005V74.2811C51.886 72.9999 60.0112 68.5572 65.8859 61.7708C71.7661 54.9844 75.0004 46.3121 75.0004 37.3334V34.6667H64.334Z" fill="white"/>
+        </svg>
+      </button>   
+      <textarea id="chatInput" class="chat-input" placeholder="Type a message..."></textarea>
+      <button id="chatSend" class="chat-send-button">➤</button>
+    </div>
+  </div>
+  
+  <script src="overlay.js"></script>
+</body>
+</html>
